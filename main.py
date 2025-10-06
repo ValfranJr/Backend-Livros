@@ -41,11 +41,30 @@ def hello_world():
 
 # Rota para listar os livros cadastrados
 @app.get("/livros")
-def get_livros(page: int = 1, limit: int = 10, credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario)):
+def get_livros(
+    page: int = 1,
+    limit: int = 10,
+    sort_by: str = "id",
+    credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario),
+):
     if page < 1 or limit < 1:
         raise HTTPException(status_code=400, detail="Page ou limit inválidos.")
     if not meus_livros:
         raise HTTPException(status_code=404, detail="Nenhum livro cadastrado.")
+
+    # Ordenação por campos escolhidos
+
+    items = list(meus_livros.items())
+    if sort_by not in ["id", "nome", "autor", "ano"]:
+        raise HTTPException(status_code=400, detail="Parâmetro de ordenação inválido.")
+    if sort_by == "nome":
+        livros_ordenados = sorted(items, key=lambda x: x[1]["nome"])
+    elif sort_by == "autor":
+        livros_ordenados = sorted(items, key=lambda x: x[1]["autor"])
+    elif sort_by == "ano":
+        livros_ordenados = sorted(items, key=lambda x: x[1]["ano"])
+    else:
+        livros_ordenados = sorted(items, key=lambda x: x[0])
 
     start = (page - 1) * limit
     end = start + limit
@@ -53,12 +72,11 @@ def get_livros(page: int = 1, limit: int = 10, credentials: HTTPBasicCredentials
     livros_paginados = [
         {
             "id": id_livro,
-            "nome": meus_livros[id_livro]["nome"],
-            "autor": meus_livros[id_livro]["autor"],
-            "ano": meus_livros[id_livro]["ano"],
+            "nome": dados_livro["nome"],
+            "autor": dados_livro["autor"],
+            "ano": dados_livro["ano"],
         }
-        for id_livro in meus_livros
-        if start <= id_livro < end
+        for id_livro, dados_livro in livros_ordenados[start:end]
     ]
 
     return [
@@ -68,13 +86,16 @@ def get_livros(page: int = 1, limit: int = 10, credentials: HTTPBasicCredentials
             "total": len(meus_livros),
             "livros": livros_paginados,
         }
-
     ]
 
 
 # Rota para cadastrar um livro
 @app.post("/adiciona")
-def post_livros(id_livro: int, livro: Livro, credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario)):
+def post_livros(
+    id_livro: int,
+    livro: Livro,
+    credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario),
+):
     if id_livro in meus_livros:
         raise HTTPException(status_code=400, detail="Livro já cadastrado.")
     else:
@@ -84,7 +105,11 @@ def post_livros(id_livro: int, livro: Livro, credentials: HTTPBasicCredentials =
 
 # Rota para atualizar um livro
 @app.put("/atualiza/{id_livro}")
-def put_livros(id_livro: int, livro: Livro, credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario)):
+def put_livros(
+    id_livro: int,
+    livro: Livro,
+    credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario),
+):
     meu_livro = meus_livros.get(id_livro)
     if not meu_livro:
         raise HTTPException(status_code=404, detail="Livro não encontrado.")
@@ -95,7 +120,9 @@ def put_livros(id_livro: int, livro: Livro, credentials: HTTPBasicCredentials = 
 
 # Rota para excluir um livro
 @app.delete("/deletar/{id_livro}")
-def delete_livro(id_livro: int, credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario)):
+def delete_livro(
+    id_livro: int, credentials: HTTPBasicCredentials = Depends(autenticar_meu_usuario)
+):
     if id_livro not in meus_livros:
         raise HTTPException(status_code=404, detail="Livro não encontrado.")
     else:
