@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pytest_cache/
+*.mypy_cache/
+*.ruff_cache/
+
+# Envs
+.venv/
+venv/
+env/
+
+# Outros
+.DS_Store
